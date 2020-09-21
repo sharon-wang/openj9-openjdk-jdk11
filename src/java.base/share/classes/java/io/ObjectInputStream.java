@@ -587,8 +587,8 @@ public class ObjectInputStream
             return obj;
         } finally {
             /* Back to the start, refresh ludcl cache on next call. */
+            refreshLudcl = true;
             if (this == startingLudclObject) {
-                refreshLudcl = true;
                 startingLudclObject = null;
             }
             passHandle = outerHandle;
@@ -704,8 +704,8 @@ public class ObjectInputStream
             return obj;
         } finally {
             /* Back to the start, refresh ludcl cache on next call. */
+            refreshLudcl = true;
             if (this == startingLudclObject) {
-                refreshLudcl = true;
                 startingLudclObject = null;
             }
             passHandle = outerHandle;
@@ -873,6 +873,9 @@ public class ObjectInputStream
                 if (refreshLudcl) {
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
+                    if (null == startingLudclObject) {
+                        startingLudclObject = this;
+                    }
                 }
                 return classCache.get(name, cachedLudcl);
             }
@@ -2326,6 +2329,9 @@ public class ObjectInputStream
         {
             /* user code is invoked */
             refreshLudcl = true;
+            if (this == startingLudclObject) {
+                startingLudclObject = null;
+            }
             Object rep = desc.invokeReadResolve(obj);
             if (unshared && rep.getClass().isArray()) {
                 rep = cloneArray(rep);
@@ -2449,6 +2455,9 @@ public class ObjectInputStream
 
                         /* user code is invoked */
                         refreshLudcl = true;
+                        if (this == startingLudclObject) {
+                            startingLudclObject = null;
+                        }
                         slotDesc.invokeReadObject(obj, this);
                     } catch (ClassNotFoundException ex) {
                         /*
@@ -2503,6 +2512,9 @@ public class ObjectInputStream
                 {
                     /* user code is invoked */
                     refreshLudcl = true;
+                    if (this == startingLudclObject) {
+                        startingLudclObject = null;
+                    }
                     slotDesc.invokeReadObjectNoData(obj);
                 }
             }
