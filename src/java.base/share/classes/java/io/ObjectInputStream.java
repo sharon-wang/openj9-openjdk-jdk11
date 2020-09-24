@@ -380,6 +380,13 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
+    /* Added for debug */
+    private String debugLudclMessages = "";
+    private void addLudclDebugMessage(String message) {
+        debugLudclMessages = debugLudclMessages + message + "\n";
+    }
+    /* END Added for debug */
+
     /**
      * Creates an ObjectInputStream that reads from the specified InputStream.
      * A serialization stream header is read from the stream and verified.
@@ -550,9 +557,17 @@ public class ObjectInputStream
             throw new AssertionError("internal error");
 
         ClassLoader oldCachedLudcl = null;
-	boolean setCached = false;
+        boolean setCached = false;
 
-	if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
+        /* Added for debug */
+        boolean debugNestedReadObjectCall = false;
+        boolean debugRefreshLudcl = refreshLudcl;
+        if (null != startingLudclObject) {
+            debugNestedReadObjectCall = true;
+        }
+        /* END: Added for debug */
+
+	    if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
 
             // If caller is not provided, follow the standard path to get the cachedLudcl.
@@ -571,6 +586,17 @@ public class ObjectInputStream
             }
         }
 
+        /* Added for debug */
+        if (debugNestedReadObjectCall) {
+            /* TODO log ludcl information coming from a nested readObject call. */
+            addLudclDebugMessage( "Starting nested readObject. "
+               + " ludcl was refreshed: " + debugRefreshLudcl
+               + " cached ludcl is: " + cachedLudcl.getClass().getName()
+               + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+            );
+        }
+        /* END: Added for debug */
+
         // if nested read, passHandle contains handle of enclosing object
         int outerHandle = passHandle;
         try {
@@ -587,12 +613,18 @@ public class ObjectInputStream
             return obj;
         } finally {
             /* Back to the start, refresh ludcl cache on next call. */
-            refreshLudcl = true;
             if (this == startingLudclObject) {
+                refreshLudcl = true;
                 startingLudclObject = null;
             }
             passHandle = outerHandle;
             if (setCached) {
+                /* Added for debug */
+                addLudclDebugMessage("setCached "
+                    + "overwrite cachedLudcl: " + cachedLudcl.getClass().getName()
+                    + "with oldCachedLudcl: " + oldCachedLudcl.getClass().getName()
+                );
+                /* END Added for debug */
                 cachedLudcl = oldCachedLudcl;
             }
             if (closed && depth == 0) {
@@ -704,12 +736,18 @@ public class ObjectInputStream
             return obj;
         } finally {
             /* Back to the start, refresh ludcl cache on next call. */
-            refreshLudcl = true;
             if (this == startingLudclObject) {
+                refreshLudcl = true;
                 startingLudclObject = null;
             }
             passHandle = outerHandle;
             if (setCached) {
+                /* Added for debug */
+                addLudclDebugMessage("setCached "
+                    + "overwrite cachedLudcl: " + cachedLudcl.getClass().getName()
+                    + "with oldCachedLudcl: " + oldCachedLudcl.getClass().getName()
+                );
+                /* END Added for debug */
                 cachedLudcl = oldCachedLudcl;
             }
             if (closed && depth == 0) {
@@ -862,29 +900,51 @@ public class ObjectInputStream
      * @throws  ClassNotFoundException if class of a serialized object cannot
      *          be found.
      */
+
+     /*  Added for debug */
     protected Class<?> resolveClass(ObjectStreamClass desc)
         throws IOException, ClassNotFoundException
     {
+        refreshLudcl = true;
+        return resolveClassInternal(desc);
+    }
+
+    private Class<?> resolveClassInternal(ObjectStreamClass desc)
+        throws IOException, ClassNotFoundException
+    {
+        /* END Added for debug */
         String name = desc.getName();
         try {
             if (null == classCache) {
+                /* Added for debug */
+                addLudclDebugMessage("Class cache is null... ");
+                /* END Added for debug */
                 return Class.forName(name, false, latestUserDefinedLoader());
             } else {
                 if (refreshLudcl) {
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
-                    if (null == startingLudclObject) {
-                        startingLudclObject = this;
-                    }
                 }
                 return classCache.get(name, cachedLudcl);
             }
         } catch (ClassNotFoundException ex) {
+            /* Added for debug */
+            /* TODO log cached and expected ludcl. */
+            addLudclDebugMessage("Class resolution failed. "
+                + " cached ludcl is: " + cachedLudcl.getClass().getName()
+                + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+            );
+            /* END Added for debug */
+
             Class<?> cl = primClasses.get(name);
             if (cl != null) {
                 return cl;
             } else {
-                throw ex;
+                /* Added for debug */
+                ClassNotFoundException debugEx = new ClassNotFoundException(debugLudclMessages);
+                debugEx.setStackTrace(ex.getStackTrace());
+                throw debugEx;
+                /* END Added for debug */
             }
         }
     }
@@ -2117,7 +2177,7 @@ public class ObjectInputStream
         bin.setBlockDataMode(true);
         final boolean checksRequired = isCustomSubclass();
         try {
-            if ((cl = resolveClass(readDesc)) == null) {
+            if ((cl = resolveClassInternal(readDesc)) == null) {
                 resolveEx = new ClassNotFoundException("null class");
             } else if (checksRequired) {
                 ReflectUtil.checkPackageAccess(cl);
@@ -2329,9 +2389,6 @@ public class ObjectInputStream
         {
             /* user code is invoked */
             refreshLudcl = true;
-            if (this == startingLudclObject) {
-                startingLudclObject = null;
-            }
             Object rep = desc.invokeReadResolve(obj);
             if (unshared && rep.getClass().isArray()) {
                 rep = cloneArray(rep);
@@ -2453,13 +2510,25 @@ public class ObjectInputStream
 
                         bin.setBlockDataMode(true);
 
+                        /* Added for debug */
+                        /* TODO log ludcl information going into invokeReadObject */
+                        addLudclDebugMessage("starting invokeReadObject "
+                            + " object to invoke is of class: " + obj.getClass().getName()
+                            + " cached ludcl is: " + cachedLudcl.getClass().getName()
+                            + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+                        );
+                        /* END Added for debug */
+
                         /* user code is invoked */
                         refreshLudcl = true;
-                        if (this == startingLudclObject) {
-                            startingLudclObject = null;
-                        }
                         slotDesc.invokeReadObject(obj, this);
                     } catch (ClassNotFoundException ex) {
+                        /* Added for debug */
+                        addLudclDebugMessage("ClassNotFoundException occurred invoking custom readObject."
+                            + " Marking passHandle: " + passHandle
+                            + " With exception: " + ex.getMessage()
+                        );
+                        /* END Added for debug */
                         /*
                          * In most cases, the handle table has already
                          * propagated a CNFException to passHandle at this
@@ -2512,9 +2581,6 @@ public class ObjectInputStream
                 {
                     /* user code is invoked */
                     refreshLudcl = true;
-                    if (this == startingLudclObject) {
-                        startingLudclObject = null;
-                    }
                     slotDesc.invokeReadObjectNoData(obj);
                 }
             }
