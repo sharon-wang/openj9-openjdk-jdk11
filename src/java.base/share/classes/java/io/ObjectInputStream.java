@@ -556,7 +556,7 @@ public class ObjectInputStream
         }
         /* END: Added for debug */
 
-	    if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
+        if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
 
             // If caller is not provided, follow the standard path to get the cachedLudcl.
@@ -577,11 +577,14 @@ public class ObjectInputStream
 
         /* Added for debug */
         if (debugNestedReadObjectCall) {
+            String cachedLudclName = (null != cachedLudcl) ? cachedLudcl.getClass().getName() : "null";
+            ClassLoader currentLudcl = latestUserDefinedLoader();
+            String ludclName = (null != currentLudcl) ? currentLudcl.getClass().getName() : "null";
             /* TODO log ludcl information coming from a nested readObject call. */
             addLudclDebugMessage( "Starting nested readObject. "
                + " ludcl was refreshed: " + debugRefreshLudcl
-               + " cached ludcl is: " + cachedLudcl.getClass().getName()
-               + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+               + " cached ludcl is: " + cachedLudclName
+               + " expected ludcl is: " + ludclName
             );
         }
         /* END: Added for debug */
@@ -609,9 +612,11 @@ public class ObjectInputStream
             passHandle = outerHandle;
             if (setCached) {
                 /* Added for debug */
+                String cachedLudclName = (null != cachedLudcl) ? cachedLudcl.getClass().getName() : "null";
+                String oldCachedLudclName = (null != oldCachedLudcl) ? oldCachedLudcl.getClass().getName() : "null";
                 addLudclDebugMessage("setCached "
-                    + "overwrite cachedLudcl: " + cachedLudcl.getClass().getName()
-                    + "with oldCachedLudcl: " + oldCachedLudcl.getClass().getName()
+                    + "overwrite cachedLudcl: " + cachedLudclName
+                    + "with oldCachedLudcl: " + oldCachedLudclName
                 );
                 /* END Added for debug */
                 cachedLudcl = oldCachedLudcl;
@@ -731,10 +736,11 @@ public class ObjectInputStream
             }
             passHandle = outerHandle;
             if (setCached) {
-                /* Added for debug */
+                String cachedLudclName = (null != cachedLudcl) ? cachedLudcl.getClass().getName() : "null";
+                String oldCachedLudclName = (null != oldCachedLudcl) ? oldCachedLudcl.getClass().getName() : "null";
                 addLudclDebugMessage("setCached "
-                    + "overwrite cachedLudcl: " + cachedLudcl.getClass().getName()
-                    + "with oldCachedLudcl: " + oldCachedLudcl.getClass().getName()
+                    + "overwrite cachedLudcl: " + cachedLudclName
+                    + "with oldCachedLudcl: " + oldCachedLudclName
                 );
                 /* END Added for debug */
                 cachedLudcl = oldCachedLudcl;
@@ -918,10 +924,13 @@ public class ObjectInputStream
             }
         } catch (ClassNotFoundException ex) {
             /* Added for debug */
+            String cachedLudclName = (null != cachedLudcl) ? cachedLudcl.getClass().getName() : "null";
+            ClassLoader currentLudcl = latestUserDefinedLoader();
+            String ludclName = (null != currentLudcl) ? currentLudcl.getClass().getName() : "null";
             /* TODO log cached and expected ludcl. */
             addLudclDebugMessage("Class resolution failed. "
-                + " cached ludcl is: " + cachedLudcl.getClass().getName()
-                + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+                + " cached ludcl is: " + cachedLudclName
+                + " expected ludcl is: " + ludclName
             );
             /* END Added for debug */
 
@@ -2481,11 +2490,14 @@ public class ObjectInputStream
                         bin.setBlockDataMode(true);
 
                         /* Added for debug */
+                        String cachedLudclName = (null != cachedLudcl) ? cachedLudcl.getClass().getName() : "null";
+                        ClassLoader currentLudcl = latestUserDefinedLoader();
+                        String ludclName = (null != currentLudcl) ? currentLudcl.getClass().getName() : "null";
                         /* TODO log ludcl information going into invokeReadObject */
                         addLudclDebugMessage("starting invokeReadObject "
                             + " object to invoke is of class: " + obj.getClass().getName()
-                            + " cached ludcl is: " + cachedLudcl.getClass().getName()
-                            + " expected ludcl is: " + latestUserDefinedLoader().getClass().getName()
+                            + " cached ludcl is: " + cachedLudclName
+                            + " expected ludcl is: " + ludclName
                         );
                         /* END Added for debug */
 
