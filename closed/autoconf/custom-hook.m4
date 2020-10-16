@@ -363,7 +363,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   else
     ENABLE_MIXED_REFERENCES=true
     OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_mxdptrs"
-    OPENJ9_LIBS_SUBDIR=compressedrefs
+    OPENJ9_LIBS_SUBDIR=default
   fi
 
   if test "x$OPENJ9_CPU" = xx86-64 ; then
