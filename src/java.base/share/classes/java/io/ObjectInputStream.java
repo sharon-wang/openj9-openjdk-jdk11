@@ -380,6 +380,25 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
+    private static final boolean forceCallGetLudcl;
+    static {
+        forceCallGetLudcl =
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
+    }
+
+    private static final class GetForceRefreshLudclSettingAction
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("com.ibm.enableForceRefreshDebug", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
+    private void printDebug(String methodName, String message) {
+        System.out.println("In " + methodName + ": " + message);
+    }
+
     /**
      * Creates an ObjectInputStream that reads from the specified InputStream.
      * A serialization stream header is read from the stream and verified.
@@ -542,6 +561,7 @@ public class ObjectInputStream
     private final Object readObject(Class<?> type, Class caller)
         throws IOException, ClassNotFoundException
     {
+        final String methodName = "readObject(Class<?> " + type.toString() + ", Class " + ((null != caller) ? caller.toString() : "null") + ")";
         if (enableOverride) {
             return readObjectOverride();
         }
@@ -550,6 +570,12 @@ public class ObjectInputStream
             throw new AssertionError("internal error");
 
         ClassLoader oldCachedLudcl = null;
+        boolean setCached = false;
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+
+        if (null != startingLudclObject) {
+            printDebug(methodName, "nested read");
+        }
 
         if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
@@ -558,9 +584,11 @@ public class ObjectInputStream
             // Otherwise use the class loader provided by JIT as the cachedLudcl.
 
             if (caller == null) {
-                 cachedLudcl = latestUserDefinedLoader();
-            }else{
-                 cachedLudcl = caller.getClassLoader();
+                cachedLudcl = latestUserDefinedLoader();
+                printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+            } else {
+                cachedLudcl = caller.getClassLoader();
+                printDebug(methodName, "refreshing ludcl: using JIT provided class loader -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             }
 
             setCached = true;
@@ -673,15 +701,22 @@ public class ObjectInputStream
      * @since   1.4
      */
     public Object readUnshared() throws IOException, ClassNotFoundException {
-
+        final String methodName = "readUnshared()";
         ClassLoader oldCachedLudcl = null;
-        boolean setCached = false; 
+        boolean setCached = false;
+
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+
+        if (null != startingLudclObject) {
+            printDebug(methodName, "nested read");
+        }
 
         if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
             cachedLudcl = latestUserDefinedLoader();
             setCached = true;
             refreshLudcl = false;
+            printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             if (null == startingLudclObject) {
                 startingLudclObject = this;
             }
@@ -865,13 +900,28 @@ public class ObjectInputStream
         throws IOException, ClassNotFoundException
     {
         String name = desc.getName();
+        final String methodName = "resolveClass(ObjectStreamClass " + name + ")";
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
         try {
             if (null == classCache) {
-                return Class.forName(name, false, latestUserDefinedLoader());
+                if (isClassCachingEnabled && forceCallGetLudcl) {
+                    cachedLudcl = latestUserDefinedLoader();
+                    printDebug(methodName, "null == classCache, refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                    refreshLudcl = false;
+                    return Class.forName(name, false, cachedLudcl);
+                } else {
+                    return Class.forName(name, false, latestUserDefinedLoader());
+                }
             } else {
+                if (forceCallGetLudcl) {
+                    printDebug(methodName, "force call latestUserDefinedLoader()");
+                    refreshLudcl = true;
+                }
+
                 if (refreshLudcl) {
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
+                    printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
                 }
                 return classCache.get(name, cachedLudcl);
             }
