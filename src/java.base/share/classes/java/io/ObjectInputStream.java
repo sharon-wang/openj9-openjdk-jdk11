@@ -384,8 +384,29 @@ public class ObjectInputStream
         }
     }
 
+    private static final boolean forcePrintDebug;
+    static {
+        forcePrintDebug =
+            AccessController.doPrivileged(new GetForcePrintDebugSettingAction());
+    }
+
+    private static final class GetForcePrintDebugSettingAction
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("com.ibm.enableForcePrintDebug", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
+    private String debugMessages = "\n";
+
     private void printDebug(String methodName, String message) {
-        System.out.println("In " + methodName + ": " + message);
+        if (forcePrintDebug) {
+            System.out.println("In " + methodName + ": " + message);
+        } else {
+            debugMessages = debugMessages + "In " + methodName + ": " + message + "\n";
+        }
     }
 
     /**
@@ -919,7 +940,13 @@ public class ObjectInputStream
             if (cl != null) {
                 return cl;
             } else {
-                throw ex;
+                if (forcePrintDebug) {
+                    throw ex;
+                } else {
+                    ClassNotFoundException debugEx = new ClassNotFoundException(debugMessages);
+                    debugEx.setStackTrace(ex.getStackTrace());
+                    throw debugEx;
+                }
             }
         }
     }
