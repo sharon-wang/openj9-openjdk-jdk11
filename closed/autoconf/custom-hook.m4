@@ -342,16 +342,26 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   AC_ARG_WITH(noncompressedrefs, [AS_HELP_STRING([--with-noncompressedrefs],
     [build non-compressedrefs vm (large heap)])])
 
+  AC_ARG_WITH(mixedrefs, [AS_HELP_STRING([--with-mixedrefs],
+    [build mixedrefs vm ])])
+
   # When compiling natively host_cpu and build_cpu are the same. But when
   # cross compiling we need to work with the host_cpu (which is where the final
   # JVM will run).
   OPENJ9_PLATFORM_EXTRACT_VARS_FROM_CPU($host_cpu)
 
-  if test "x$with_noncompressedrefs" = x ; then
-    OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
-    OPENJ9_LIBS_SUBDIR=compressedrefs
+  ENABLE_MIXED_REFERENCES=false
+  if test "x$with_mixedrefs" = x; then
+    if test "x$with_noncompressedrefs" = x ; then
+      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
+      OPENJ9_LIBS_SUBDIR=compressedrefs
+    else
+      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}"
+      OPENJ9_LIBS_SUBDIR=default
+    fi
   else
-    OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}"
+    ENABLE_MIXED_REFERENCES=true
+    OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_mxdptrs"
     OPENJ9_LIBS_SUBDIR=default
   fi
 
@@ -360,25 +370,37 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
       OPENJ9_PLATFORM_CODE=xa64
     elif test "x$OPENJDK_BUILD_OS" = xwindows ; then
       OPENJ9_PLATFORM_CODE=wa64
-      if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
-        OPENJ9_BUILDSPEC=win_x86-64
+      if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+        if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
+          OPENJ9_BUILDSPEC=win_x86-64
+        else
+          OPENJ9_BUILDSPEC=win_x86-64_cmprssptrs
+        fi
       else
-        OPENJ9_BUILDSPEC=win_x86-64_cmprssptrs
+        OPENJ9_BUILDSPEC=win_x86-64_mxdptrs
       fi
     elif test "x$OPENJDK_BUILD_OS" = xmacosx ; then
       OPENJ9_PLATFORM_CODE=oa64
-      if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
-        OPENJ9_BUILDSPEC=osx_x86-64
+      if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+        if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
+          OPENJ9_BUILDSPEC=osx_x86-64
+        else
+          OPENJ9_BUILDSPEC=osx_x86-64_cmprssptrs
+        fi
       else
-        OPENJ9_BUILDSPEC=osx_x86-64_cmprssptrs
+        OPENJ9_BUILDSPEC=osx_x86-64_mxdptrs
       fi
     else
       AC_MSG_ERROR([Unsupported OpenJ9 platform ${OPENJDK_BUILD_OS}!])
     fi
   elif test "x$OPENJ9_CPU" = xppc-64_le ; then
     OPENJ9_PLATFORM_CODE=xl64
-    if test "x$OPENJ9_LIBS_SUBDIR" != xdefault ; then
-      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_cmprssptrs_le"
+    if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+      if test "x$OPENJ9_LIBS_SUBDIR" != xdefault ; then
+        OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_cmprssptrs_le"
+      fi
+    else
+      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_mxdptrs_le"
     fi
   elif test "x$OPENJ9_CPU" = x390-64 ; then
     OPENJ9_PLATFORM_CODE=xz64
