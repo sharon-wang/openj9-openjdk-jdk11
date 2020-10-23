@@ -380,7 +380,7 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
-    private static final boolean forceCallGetLudcl;
+    private static final boolean forceCallGetLudcl1;
     static {
         forceCallGetLudcl =
             AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
@@ -390,7 +390,22 @@ public class ObjectInputStream
     implements PrivilegedAction<Boolean> {
         public Boolean run() {
             String property =
-                System.getProperty("com.ibm.enableForceRefreshDebug", "false");
+                System.getProperty("com.ibm.enableForceRefreshDebug1", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
+    private static final boolean forceCallGetLudcl2;
+    static {
+        forceCallGetLudcl =
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
+    }
+
+    private static final class GetForceRefreshLudclSettingAction
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("com.ibm.enableForceRefreshDebug2", "false");
             return property.equalsIgnoreCase("true");
         }
     }
@@ -883,7 +898,7 @@ public class ObjectInputStream
         String name = desc.getName();
         try {
             if (null == classCache) {
-                if (isClassCachingEnabled && forceCallGetLudcl) {
+                if (isClassCachingEnabled && forceCallGetLudcl1) {
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
                     return Class.forName(name, false, cachedLudcl);
@@ -891,7 +906,7 @@ public class ObjectInputStream
                     return Class.forName(name, false, latestUserDefinedLoader());
                 }
             } else {
-                if (forceCallGetLudcl) {
+                if (forceCallGetLudcl2) {
                     refreshLudcl = true;
                 }
 
