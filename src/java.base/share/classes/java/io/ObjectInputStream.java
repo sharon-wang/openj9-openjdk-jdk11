@@ -383,10 +383,10 @@ public class ObjectInputStream
     private static final boolean forceCallGetLudcl1;
     static {
         forceCallGetLudcl =
-            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction1());
     }
 
-    private static final class GetForceRefreshLudclSettingAction
+    private static final class GetForceRefreshLudclSettingAction1
     implements PrivilegedAction<Boolean> {
         public Boolean run() {
             String property =
@@ -398,10 +398,10 @@ public class ObjectInputStream
     private static final boolean forceCallGetLudcl2;
     static {
         forceCallGetLudcl =
-            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction2());
     }
 
-    private static final class GetForceRefreshLudclSettingAction
+    private static final class GetForceRefreshLudclSettingAction2
     implements PrivilegedAction<Boolean> {
         public Boolean run() {
             String property =
