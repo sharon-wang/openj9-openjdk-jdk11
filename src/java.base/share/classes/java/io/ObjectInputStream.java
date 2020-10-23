@@ -382,7 +382,7 @@ public class ObjectInputStream
 
     private static final boolean forceCallGetLudcl1;
     static {
-        forceCallGetLudcl =
+        forceCallGetLudcl1 =
             AccessController.doPrivileged(new GetForceRefreshLudclSettingAction1());
     }
 
@@ -397,7 +397,7 @@ public class ObjectInputStream
 
     private static final boolean forceCallGetLudcl2;
     static {
-        forceCallGetLudcl =
+        forceCallGetLudcl2 =
             AccessController.doPrivileged(new GetForceRefreshLudclSettingAction2());
     }
 
