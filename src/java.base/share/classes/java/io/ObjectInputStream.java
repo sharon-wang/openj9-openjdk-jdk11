@@ -380,34 +380,25 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
-    private static final boolean forceCallGetLudcl1;
+    private static final boolean forceCallGetLudcl;
     static {
-        forceCallGetLudcl1 =
-            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction1());
+        forceCallGetLudcl =
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
     }
 
-    private static final class GetForceRefreshLudclSettingAction1
+    private static final class GetForceRefreshLudclSettingAction
     implements PrivilegedAction<Boolean> {
         public Boolean run() {
             String property =
-                System.getProperty("com.ibm.enableForceRefreshDebug1", "false");
+                System.getProperty("com.ibm.enableForceRefreshDebug", "false");
             return property.equalsIgnoreCase("true");
         }
     }
 
-    private static final boolean forceCallGetLudcl2;
-    static {
-        forceCallGetLudcl2 =
-            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction2());
-    }
+    private String debugMessages = "\n";
 
-    private static final class GetForceRefreshLudclSettingAction2
-    implements PrivilegedAction<Boolean> {
-        public Boolean run() {
-            String property =
-                System.getProperty("com.ibm.enableForceRefreshDebug2", "false");
-            return property.equalsIgnoreCase("true");
-        }
+    private void printDebug(String methodName, String message) {
+        debugMessages = debugMessages + "In " + methodName + ": " + message + "\n";
     }
 
     /**
@@ -572,6 +563,7 @@ public class ObjectInputStream
     private final Object readObject(Class<?> type, Class caller)
         throws IOException, ClassNotFoundException
     {
+        final String methodName = "readObject(Class<?> " + type.toString() + ", Class " + ((null != caller) ? caller.toString() : "null") + ")";
         if (enableOverride) {
             return readObjectOverride();
         }
@@ -582,6 +574,12 @@ public class ObjectInputStream
         ClassLoader oldCachedLudcl = null;
         boolean setCached = false;
 
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+
+        if (null != startingLudclObject) {
+            printDebug(methodName, "nested read");
+        }
+
         if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
 
@@ -590,8 +588,10 @@ public class ObjectInputStream
 
             if (caller == null) {
                 cachedLudcl = latestUserDefinedLoader();
+                printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             } else {
                 cachedLudcl = caller.getClassLoader();
+                printDebug(methodName, "refreshing ludcl: using JIT provided class loader -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             }
 
             setCached = true;
@@ -706,13 +706,20 @@ public class ObjectInputStream
     public Object readUnshared() throws IOException, ClassNotFoundException {
         ClassLoader oldCachedLudcl = null;
         boolean setCached = false;
+        final String methodName = "readUnshared()";
 
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+
+        if (null != startingLudclObject) {
+            printDebug(methodName, "nested read");
+        }
 
         if (((null == curContext) || refreshLudcl) && (isClassCachingEnabled)) {
             oldCachedLudcl = cachedLudcl;
             cachedLudcl = latestUserDefinedLoader();
             setCached = true;
             refreshLudcl = false;
+            printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             if (null == startingLudclObject) {
                 startingLudclObject = this;
             }
@@ -896,23 +903,24 @@ public class ObjectInputStream
         throws IOException, ClassNotFoundException
     {
         String name = desc.getName();
+        final String methodName = "resolveClass(ObjectStreamClass " + name + ")";
+        printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
         try {
             if (null == classCache) {
-                if (isClassCachingEnabled && forceCallGetLudcl1) {
-                    cachedLudcl = latestUserDefinedLoader();
-                    refreshLudcl = false;
-                    return Class.forName(name, false, cachedLudcl);
-                } else {
-                    return Class.forName(name, false, latestUserDefinedLoader());
+                if (isClassCachingEnabled) {
+                    printDebug(methodName, "class caching enabled, but classCache is null");
                 }
+                return Class.forName(name, false, latestUserDefinedLoader());
             } else {
-                if (forceCallGetLudcl2) {
+                if (forceCallGetLudcl) {
+                    printDebug(methodName, "force call latestUserDefinedLoader()");
                     refreshLudcl = true;
                 }
 
                 if (refreshLudcl) {
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
+                    printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
                 }
                 return classCache.get(name, cachedLudcl);
             }
@@ -921,7 +929,10 @@ public class ObjectInputStream
             if (cl != null) {
                 return cl;
             } else {
-                throw ex;
+                // throw ex;
+                ClassNotFoundException debugEx = new ClassNotFoundException(debugMessages);
+                debugEx.setStackTrace(ex.getStackTrace());
+                throw debugEx;
             }
         }
     }
