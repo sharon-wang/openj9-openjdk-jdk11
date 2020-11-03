@@ -350,7 +350,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   # JVM will run).
   OPENJ9_PLATFORM_EXTRACT_VARS_FROM_CPU($host_cpu)
 
-  ENABLE_MIXED_REFERENCES=false
+  OPENJ9_ENABLE_MIXED_REFERENCES=false
   if test "x$with_mixedrefs" = x; then
     if test "x$with_noncompressedrefs" = x ; then
       OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
@@ -360,7 +360,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
       OPENJ9_LIBS_SUBDIR=default
     fi
   else
-    ENABLE_MIXED_REFERENCES=true
+    OPENJ9_ENABLE_MIXED_REFERENCES=true
     OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_mxdptrs"
     OPENJ9_LIBS_SUBDIR=default
   fi
@@ -370,7 +370,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
       OPENJ9_PLATFORM_CODE=xa64
     elif test "x$OPENJDK_BUILD_OS" = xwindows ; then
       OPENJ9_PLATFORM_CODE=wa64
-      if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+      if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
         if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
           OPENJ9_BUILDSPEC=win_x86-64
         else
@@ -381,7 +381,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
       fi
     elif test "x$OPENJDK_BUILD_OS" = xmacosx ; then
       OPENJ9_PLATFORM_CODE=oa64
-      if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+      if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
         if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
           OPENJ9_BUILDSPEC=osx_x86-64
         else
@@ -395,7 +395,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
     fi
   elif test "x$OPENJ9_CPU" = xppc-64_le ; then
     OPENJ9_PLATFORM_CODE=xl64
-    if test "x$ENABLE_MIXED_REFERENCES" = xfalse ; then
+    if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
       if test "x$OPENJ9_LIBS_SUBDIR" != xdefault ; then
         OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_cmprssptrs_le"
       fi
@@ -428,6 +428,7 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   AC_SUBST(OPENJ9_PLATFORM_CODE)
   AC_SUBST(COMPILER_VERSION_STRING)
   AC_SUBST(OPENJ9_LIBS_SUBDIR)
+  AC_SUBST(OPENJ9_ENABLE_MIXED_REFERENCES)
 ])
 
 AC_DEFUN([OPENJ9_CHECK_NASM_VERSION],
