@@ -343,64 +343,50 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
     [build non-compressedrefs vm (large heap)])])
 
   AC_ARG_WITH(mixedrefs, [AS_HELP_STRING([--with-mixedrefs],
-    [build mixedrefs vm ])])
+    [build mixedrefs vm])])
 
   # When compiling natively host_cpu and build_cpu are the same. But when
   # cross compiling we need to work with the host_cpu (which is where the final
   # JVM will run).
   OPENJ9_PLATFORM_EXTRACT_VARS_FROM_CPU($host_cpu)
 
-  OPENJ9_ENABLE_MIXED_REFERENCES=false
-  if test "x$with_mixedrefs" = xno -o "x$with_mixedrefs" = x; then
-    if test "x$with_noncompressedrefs" = xno -o "x$with_noncompressedrefs" = x ; then
-      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
-      OPENJ9_LIBS_SUBDIR=compressedrefs
-    else
-      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}"
-      OPENJ9_LIBS_SUBDIR=default
-    fi
-  else
+  # Default OPENJ9_BUILD_OS=OPENJDK_BUILD_OS, but override with OpenJ9 equivalent as appropriate
+  OPENJ9_BUILD_OS="${OPENJDK_BUILD_OS}"
+
+  if test "x$with_mixedrefs" = xyes ; then
+    OPENJ9_BUILD_MODE_ARCH="${OPENJ9_CPU}_mxdptrs"
     OPENJ9_ENABLE_MIXED_REFERENCES=true
-    OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_mxdptrs"
+    OPENJ9_LIBS_SUBDIR=default
+  elif test "x$with_noncompressedrefs" = xyes ; then
+    OPENJ9_BUILD_MODE_ARCH="${OPENJ9_CPU}_cmprssptrs"
+    OPENJ9_ENABLE_MIXED_REFERENCES=false
+    OPENJ9_LIBS_SUBDIR=compressedrefs
+  else
+    OPENJ9_BUILD_MODE_ARCH="${OPENJ9_CPU}"
+    OPENJ9_ENABLE_MIXED_REFERENCES=false
     OPENJ9_LIBS_SUBDIR=default
   fi
 
   if test "x$OPENJ9_CPU" = xx86-64 ; then
-    if test "x$OPENJDK_BUILD_OS" = xlinux ; then
+    if test "x$OPENJ9_BUILD_OS" = xlinux ; then
       OPENJ9_PLATFORM_CODE=xa64
-    elif test "x$OPENJDK_BUILD_OS" = xwindows ; then
+    elif test "x$OPENJ9_BUILD_OS" = xwindows ; then
       OPENJ9_PLATFORM_CODE=wa64
-      if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
-        if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
-          OPENJ9_BUILDSPEC=win_x86-64
-        else
-          OPENJ9_BUILDSPEC=win_x86-64_cmprssptrs
-        fi
-      else
-        OPENJ9_BUILDSPEC=win_x86-64_mxdptrs
-      fi
-    elif test "x$OPENJDK_BUILD_OS" = xmacosx ; then
+      OPENJ9_BUILD_OS=win
+    elif test "x$OPENJ9_BUILD_OS" = xmacosx ; then
       OPENJ9_PLATFORM_CODE=oa64
-      if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
-        if test "x$OPENJ9_LIBS_SUBDIR" = xdefault ; then
-          OPENJ9_BUILDSPEC=osx_x86-64
-        else
-          OPENJ9_BUILDSPEC=osx_x86-64_cmprssptrs
-        fi
-      else
-        OPENJ9_BUILDSPEC=osx_x86-64_mxdptrs
-      fi
+      OPENJ9_BUILD_OS=osx
     else
-      AC_MSG_ERROR([Unsupported OpenJ9 platform ${OPENJDK_BUILD_OS}!])
+      AC_MSG_ERROR([Unsupported OpenJ9 platform ${OPENJ9_BUILD_OS}!])
     fi
   elif test "x$OPENJ9_CPU" = xppc-64_le ; then
     OPENJ9_PLATFORM_CODE=xl64
     if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xfalse ; then
       if test "x$OPENJ9_LIBS_SUBDIR" != xdefault ; then
-        OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_cmprssptrs_le"
+        OPENJ9_BUILD_MODE_ARCH="ppc-64_cmprssptrs_le"
       fi
     else
-      OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_ppc-64_mxdptrs_le"
+      OPENJ9_BUILD_MODE_ARCH="ppc-64_mxdptrs_le"
     fi
   elif test "x$OPENJ9_CPU" = x390-64 ; then
     OPENJ9_PLATFORM_CODE=xz64
@@ -408,21 +394,24 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
     OPENJ9_PLATFORM_CODE=ap64
   elif test "x$OPENJ9_CPU" = xarm ; then
     OPENJ9_PLATFORM_CODE=xr32
-    OPENJ9_BUILDSPEC=linux_arm_linaro
+    OPENJ9_BUILD_OS=linux
+    OPENJ9_BUILD_MODE_ARCH=arm_linaro
     OPENJ9_LIBS_SUBDIR=default
   elif test "x$OPENJ9_CPU" = xaarch64 ; then
     OPENJ9_PLATFORM_CODE=xr64
     if test "x$COMPILE_TYPE" = xcross ; then
-      OPENJ9_BUILDSPEC="${OPENJ9_BUILDSPEC}_cross"
+      OPENJ9_BUILD_MODE_ARCH="${OPENJ9_BUILD_MODE_ARCH}_cross"
     fi
   elif test "x$OPENJ9_CPU" = xriscv64 ; then
     OPENJ9_PLATFORM_CODE=rv64
     if test "x$COMPILE_TYPE" = xcross ; then
-      OPENJ9_BUILDSPEC="${OPENJ9_BUILDSPEC}_cross"
+      OPENJ9_BUILD_MODE_ARCH="${OPENJ9_BUILD_MODE_ARCH}_cross"
     fi
   else
     AC_MSG_ERROR([Unsupported OpenJ9 cpu ${OPENJ9_CPU}!])
   fi
+
+  OPENJ9_BUILDSPEC="${OPENJ9_BUILD_OS}_${OPENJ9_BUILD_MODE_ARCH}"
 
   AC_SUBST(OPENJ9_BUILDSPEC)
   AC_SUBST(OPENJ9_PLATFORM_CODE)
