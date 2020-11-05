@@ -351,8 +351,8 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   OPENJ9_PLATFORM_EXTRACT_VARS_FROM_CPU($host_cpu)
 
   OPENJ9_ENABLE_MIXED_REFERENCES=false
-  if test "x$with_mixedrefs" = x; then
-    if test "x$with_noncompressedrefs" = x ; then
+  if test "x$with_mixedrefs" == xno -o "x$with_mixedrefs" == x; then
+    if test "x$with_noncompressedrefs" == xno -o "x$with_noncompressedrefs" == x ; then
       OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
       OPENJ9_LIBS_SUBDIR=compressedrefs
     else

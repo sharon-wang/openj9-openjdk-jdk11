@@ -60,13 +60,12 @@ $(call openj9_copy_files_and_debuginfos, \
 NO_JIT_CPUS := riscv64
 
 # Decide which GC lib(s) to copy
-POINTER_MODE := mixed
-ifeq (false,$(OPENJ9_ENABLE_MIXED_REFERENCES))
-	ifeq (compressedrefs,$(OPENJ9_LIBS_SUBDIR))
-		POINTER_MODE := compressed
-	else
-		POINTER_MODE := full
-	endif
+ifeq (true,$(OPENJ9_ENABLE_MIXED_REFERENCES))
+  POINTER_MODE := mixed
+else ifeq (compressedrefs,$(OPENJ9_LIBS_SUBDIR))
+  POINTER_MODE := compressed
+else
+  POINTER_MODE := full
 endif
 
 $(call openj9_copy_shlibs, \
