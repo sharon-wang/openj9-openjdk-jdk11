@@ -75,6 +75,11 @@ AC_DEFUN([OPENJ9_CONFIGURE_CMAKE],
   # at this point with_cmake should either be no, or the name of the cmake command
   if test "x$with_cmake" = xno ; then
     OPENJ9_ENABLE_CMAKE=false
+
+    # Currently, mixedrefs mode is only available with CMake enabled
+    if test "x$OPENJ9_ENABLE_MIXED_REFERENCES" = xtrue ; then
+      AC_MSG_ERROR([--with-mixedrefs requires --with-cmake])
+    fi
   else
     OPENJ9_ENABLE_CMAKE=true
     if AS_EXECUTABLE_P(["$with_cmake"]) ; then
