@@ -54,7 +54,7 @@ AC_DEFUN([OPENJ9_CONFIGURE_CMAKE],
 [
   AC_ARG_WITH(cmake, [AS_HELP_STRING([--with-cmake], [enable building openJ9 with CMake])],
     [
-      if test "x$with_cmake" == xyes -o "x$with_cmake" == x ; then
+      if test "x$with_cmake" = xyes -o "x$with_cmake" = x ; then
         with_cmake=cmake
       fi
     ],
@@ -351,8 +351,8 @@ AC_DEFUN([OPENJ9_PLATFORM_SETUP],
   OPENJ9_PLATFORM_EXTRACT_VARS_FROM_CPU($host_cpu)
 
   OPENJ9_ENABLE_MIXED_REFERENCES=false
-  if test "x$with_mixedrefs" == xno -o "x$with_mixedrefs" == x; then
-    if test "x$with_noncompressedrefs" == xno -o "x$with_noncompressedrefs" == x ; then
+  if test "x$with_mixedrefs" = xno -o "x$with_mixedrefs" = x; then
+    if test "x$with_noncompressedrefs" = xno -o "x$with_noncompressedrefs" = x ; then
       OPENJ9_BUILDSPEC="${OPENJDK_BUILD_OS}_${OPENJ9_CPU}_cmprssptrs"
       OPENJ9_LIBS_SUBDIR=compressedrefs
     else
@@ -475,7 +475,7 @@ AC_DEFUN([OPENJ9_THIRD_PARTY_REQUIREMENTS],
   FREEMARKER_JAR=
   if test "x$OPENJ9_ENABLE_CMAKE" != xtrue ; then
     AC_MSG_CHECKING([that freemarker location is set])
-    if test "x$with_freemarker_jar" == x -o "x$with_freemarker_jar" == xno ; then
+    if test "x$with_freemarker_jar" = x -o "x$with_freemarker_jar" = xno ; then
       AC_MSG_RESULT([no])
       printf "\n"
       printf "The FreeMarker library is required to build the OpenJ9 build tools\n"
