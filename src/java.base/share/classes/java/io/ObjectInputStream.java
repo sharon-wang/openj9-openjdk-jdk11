@@ -410,6 +410,21 @@ public class ObjectInputStream
         }
     }
 
+    private static final boolean enableNestedResolve;
+    static {
+        enableNestedResolve =
+            AccessController.doPrivileged(new GetNestedResolveSettingAction());
+    }
+
+    private static final class GetNestedResolveSettingAction
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("com.ibm.enableNestedResolve", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
     private String debugMessages = "\n";
 
     private void printDebug(String methodName, String message) {
@@ -932,8 +947,18 @@ public class ObjectInputStream
         String name = desc.getName();
         final String methodName = "resolveClass(ObjectStreamClass " + name + ")";
 
+        ClassLoader oldCachedLudcl = null;
+        boolean setCached = false;
+
         if (enableLudclDebug) {
-            printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));   
+            printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+            // System.out.println(methodName + "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+            if (enableNestedResolve) {
+                if (null != startingLudclObject) {
+                    printDebug(methodName, "nested resolve");
+                    // System.out.println(methodName + " nested resolve");
+                }
+            }
         }
 
         try {
@@ -953,12 +978,26 @@ public class ObjectInputStream
                 }
 
                 if (refreshLudcl) {
+                    if (enableNestedResolve) {
+                        oldCachedLudcl = cachedLudcl;
+                    }
+
                     cachedLudcl = latestUserDefinedLoader();
                     refreshLudcl = false;
+
                     if (enableLudclDebug) {
                         printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                        // System.out.println(methodName + "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                    }
+
+                    if (enableNestedResolve) {
+                        setCached = true;
+                        if (null == startingLudclObject) {
+                            startingLudclObject = this;
+                        }
                     }
                 }
+
                 return classCache.get(name, cachedLudcl);
             }
         } catch (ClassNotFoundException ex) {
@@ -970,6 +1009,17 @@ public class ObjectInputStream
                 ClassNotFoundException debugEx = new ClassNotFoundException(debugMessages);
                 debugEx.setStackTrace(ex.getStackTrace());
                 throw debugEx;
+            }
+        } finally {
+            if (enableNestedResolve) {
+                /* Back to the start, refresh ludcl cache on next call. */
+                if (this == startingLudclObject) {
+                    refreshLudcl = true;
+                    startingLudclObject = null;
+                }
+                if (setCached) {
+                    cachedLudcl = oldCachedLudcl;
+                }
             }
         }
     }
