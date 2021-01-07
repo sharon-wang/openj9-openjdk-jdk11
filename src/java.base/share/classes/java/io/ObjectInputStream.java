@@ -865,6 +865,12 @@ public class ObjectInputStream
     protected Class<?> resolveClass(ObjectStreamClass desc)
         throws IOException, ClassNotFoundException
     {
+        return resolveClassImpl(desc, false);
+    }
+
+    private Class<?> resolveClassImpl(ObjectStreamClass desc, boolean isCustomSubclass)
+        throws IOException, ClassNotFoundException
+    {
         String name = desc.getName();
         ClassLoader oldCachedLudcl = null;
         boolean setCached = false;
@@ -873,7 +879,7 @@ public class ObjectInputStream
             if (null == classCache) {
                 return Class.forName(name, false, latestUserDefinedLoader());
             } else {
-                if (refreshLudcl) {
+                if (refreshLudcl && isCustomSubclass) {
                     oldCachedLudcl = cachedLudcl;
                     cachedLudcl = latestUserDefinedLoader();
 
@@ -2132,7 +2138,7 @@ public class ObjectInputStream
         bin.setBlockDataMode(true);
         final boolean checksRequired = isCustomSubclass();
         try {
-            if ((cl = resolveClass(readDesc)) == null) {
+            if ((cl = resolveClassImpl(readDesc, checksRequired)) == null) {
                 resolveEx = new ClassNotFoundException("null class");
             } else if (checksRequired) {
                 ReflectUtil.checkPackageAccess(cl);
