@@ -380,9 +380,9 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
-    private static final boolean forceCallGetLudcl;
+    private static final boolean useLudclFix;
     static {
-        forceCallGetLudcl =
+        useLudclFix =
             AccessController.doPrivileged(new GetForceRefreshLudclSettingAction());
     }
 
@@ -390,7 +390,7 @@ public class ObjectInputStream
     implements PrivilegedAction<Boolean> {
         public Boolean run() {
             String property =
-                System.getProperty("com.ibm.enableForceRefreshDebug", "false");
+                System.getProperty("com.ibm.useLudclFix", "false");
             return property.equalsIgnoreCase("true");
         }
     }
@@ -593,7 +593,7 @@ public class ObjectInputStream
         if (enableLudclDebug) {
             printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
             if (null != startingLudclObject) {
-                printDebug(methodName, "nested read");
+                printDebug(methodName, "nested read --- startingLudclObject: " + startingLudclObject.toString());
             }
         }
 
@@ -619,6 +619,9 @@ public class ObjectInputStream
             refreshLudcl = false;
             if (null == startingLudclObject) {
                 startingLudclObject = this;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "set startingLudclObject: " + startingLudclObject.toString());
+                }
             }
         }
 
@@ -640,11 +643,24 @@ public class ObjectInputStream
             /* Back to the start, refresh ludcl cache on next call. */
             if (this == startingLudclObject) {
                 refreshLudcl = true;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "done nested read --- startingLudclObject: " + startingLudclObject.toString());
+                }
                 startingLudclObject = null;
+            } else {
+                if (enableLudclDebug) {
+                    printDebug(methodName, "this != startingLudclObject --- this: " + this.toString());
+                    if (startingLudclObject != null) {
+                        printDebug(methodName, "this != startingLudclObject --- startingLudclObject: " + startingLudclObject.toString());
+                    }
+                }
             }
             passHandle = outerHandle;
             if (setCached) {
                 cachedLudcl = oldCachedLudcl;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "done nested read --- reset cachedLudcl: " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                }
             }
             if (closed && depth == 0) {
                 clear();
@@ -733,7 +749,7 @@ public class ObjectInputStream
             printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
 
             if (null != startingLudclObject) {
-                printDebug(methodName, "nested read");
+                printDebug(methodName, "nested read --- startingLudclObject: " + startingLudclObject.toString());
             }
         }
 
@@ -749,6 +765,9 @@ public class ObjectInputStream
 
             if (null == startingLudclObject) {
                 startingLudclObject = this;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "set startingLudclObject: " + startingLudclObject.toString());
+                }
             }
         }
 
@@ -770,11 +789,24 @@ public class ObjectInputStream
             /* Back to the start, refresh ludcl cache on next call. */
             if (this == startingLudclObject) {
                 refreshLudcl = true;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "done nested read --- startingLudclObject: " + startingLudclObject.toString());
+                }
                 startingLudclObject = null;
+            } else {
+                if (enableLudclDebug) {
+                    printDebug(methodName, "this != startingLudclObject --- this: " + this.toString());
+                    if (startingLudclObject != null) {
+                        printDebug(methodName, "this != startingLudclObject --- startingLudclObject: " + startingLudclObject.toString());
+                    }
+                }
             }
             passHandle = outerHandle;
             if (setCached) {
                 cachedLudcl = oldCachedLudcl;
+                if (enableLudclDebug) {
+                    printDebug(methodName, "done nested read --- reset cachedLudcl: " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                }
             }
             if (closed && depth == 0) {
                 clear();
@@ -932,8 +964,17 @@ public class ObjectInputStream
         String name = desc.getName();
         final String methodName = "resolveClass(ObjectStreamClass " + name + ")";
 
+        ClassLoader oldCachedLudcl = null;
+        boolean setCached = false;
+
         if (enableLudclDebug) {
-            printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));   
+            if (isCustomSubclass()) {
+                printDebug(methodName, "Custom subclass of OIS!");
+            }
+            printDebug(methodName, "cachedLudcl = " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+            if (null != startingLudclObject) {
+                printDebug(methodName, "nested read --- startingLudclObject: " + startingLudclObject.toString());
+            }
         }
 
         try {
@@ -945,18 +986,25 @@ public class ObjectInputStream
                 }
                 return Class.forName(name, false, latestUserDefinedLoader());
             } else {
-                if (forceCallGetLudcl) {
-                    if (enableLudclDebug) {
-                        printDebug(methodName, "force call latestUserDefinedLoader()");
-                    }
-                    refreshLudcl = true;
-                }
-
                 if (refreshLudcl) {
+                    if (useLudclFix) {
+                        oldCachedLudcl = cachedLudcl;
+                    }
                     cachedLudcl = latestUserDefinedLoader();
-                    refreshLudcl = false;
                     if (enableLudclDebug) {
                         printDebug(methodName, "refreshing ludcl: calling latestUserDefinedLoader() -- new cachedLudcl " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                    }
+                    if (useLudclFix) {
+                        setCached = true;
+                    }
+                    refreshLudcl = false;
+                    if (useLudclFix) {
+                        if (null == startingLudclObject) {
+                            startingLudclObject = this;
+                            if (enableLudclDebug) {
+                                printDebug(methodName, "set startingLudclObject: " + startingLudclObject.toString());
+                            }
+                        }
                     }
                 }
                 return classCache.get(name, cachedLudcl);
@@ -970,6 +1018,30 @@ public class ObjectInputStream
                 ClassNotFoundException debugEx = new ClassNotFoundException(debugMessages);
                 debugEx.setStackTrace(ex.getStackTrace());
                 throw debugEx;
+            }
+        } finally {
+            if (useLudclFix) {
+                /* Back to the start, refresh ludcl cache on next call. */
+                if (this == startingLudclObject) {
+                    refreshLudcl = true;
+                    if (enableLudclDebug) {
+                        printDebug(methodName, "done nested read --- startingLudclObject: " + startingLudclObject.toString());
+                    }
+                    startingLudclObject = null;
+                } else {
+                    if (enableLudclDebug) {
+                        printDebug(methodName, "this != startingLudclObject --- this: " + this.toString());
+                        if (startingLudclObject != null) {
+                            printDebug(methodName, "this != startingLudclObject --- startingLudclObject: " + startingLudclObject.toString());
+                        }
+                    }
+                }
+                if (setCached) {
+                    cachedLudcl = oldCachedLudcl;
+                    if (enableLudclDebug) {
+                        printDebug(methodName, "done nested read --- reset cachedLudcl: " + ((null == cachedLudcl) ? "null" : cachedLudcl.toString()));
+                    }
+                }
             }
         }
     }
@@ -2181,6 +2253,8 @@ public class ObjectInputStream
     private ObjectStreamClass readNonProxyDesc(boolean unshared)
         throws IOException
     {
+        final String methodName = "readNonProxyDesc(boolean unshared: " + unshared + ")";
+
         if (bin.readByte() != TC_CLASSDESC) {
             throw new InternalError();
         }
@@ -2201,6 +2275,9 @@ public class ObjectInputStream
         ClassNotFoundException resolveEx = null;
         bin.setBlockDataMode(true);
         final boolean checksRequired = isCustomSubclass();
+        if (enableLudclDebug) {
+            printDebug(methodName, "readNonProxyDesc() call to resolveClass()");
+        }
         try {
             if ((cl = resolveClass(readDesc)) == null) {
                 resolveEx = new ClassNotFoundException("null class");
