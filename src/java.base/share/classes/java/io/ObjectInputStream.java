@@ -380,6 +380,7 @@ public class ObjectInputStream
     private boolean refreshLudcl = false;
     private Object startingLudclObject = null;
 
+    // Refresh in all nested cases in resolveClass
     private static final boolean useLudclFix;
     static {
         useLudclFix =
@@ -395,6 +396,23 @@ public class ObjectInputStream
         }
     }
 
+    // Refresh if custom subclass in readNonProxyDesc
+    private static final boolean useLudclFix2;
+    static {
+        useLudclFix2 =
+            AccessController.doPrivileged(new GetForceRefreshLudclSettingAction2());
+    }
+
+    private static final class GetForceRefreshLudclSettingAction2
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("com.ibm.useLudclFix2", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
+    // Enable debug output
     private static final boolean enableLudclDebug;
     static {
         enableLudclDebug =
@@ -2275,8 +2293,11 @@ public class ObjectInputStream
         ClassNotFoundException resolveEx = null;
         bin.setBlockDataMode(true);
         final boolean checksRequired = isCustomSubclass();
+        if (useLudclFix2 && checksRequired) {
+            refreshLudcl = true;
+        }
         if (enableLudclDebug) {
-            printDebug(methodName, "readNonProxyDesc() call to resolveClass()");
+            printDebug(methodName, "readNonProxyDesc() call to resolveClass() // checksRequired: " + checksRequired);
         }
         try {
             if ((cl = resolveClass(readDesc)) == null) {
