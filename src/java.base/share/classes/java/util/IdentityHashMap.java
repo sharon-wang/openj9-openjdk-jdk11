@@ -25,6 +25,7 @@
 
 package java.util;
 
+import java.io.LogUtil;
 import java.lang.reflect.Array;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -1297,6 +1298,8 @@ public class IdentityHashMap<K,V>
      */
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException  {
+        LogUtil.log("You can write from anywhere still going to the same tmp file. Writing the IdentityHashMap!");
+
         // Read in any hidden stuff
         s.defaultReadObject();
 

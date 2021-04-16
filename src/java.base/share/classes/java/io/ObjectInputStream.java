@@ -542,6 +542,8 @@ public class ObjectInputStream
     private final Object readObject(Class<?> type, Class caller)
         throws IOException, ClassNotFoundException
     {
+        LogUtil.log("Reading object: " + type.getName());
+
         if (enableOverride) {
             return readObjectOverride();
         }
@@ -1162,15 +1164,20 @@ public class ObjectInputStream
      * @throws  IOException If an I/O error has occurred.
      */
     public void close() throws IOException {
-        /*
-         * Even if stream already closed, propagate redundant close to
-         * underlying stream to stay consistent with previous implementations.
-         */
-        closed = true;
-        if (depth == 0) {
-            clear();
+        try {
+            /*
+             * Even if stream already closed, propagate redundant close to
+             * underlying stream to stay consistent with previous implementations.
+             */
+            closed = true;
+            if (depth == 0) {
+                clear();
+            }
+            bin.close();
         }
-        bin.close();
+        finally {
+            LogUtil.clear(); // Closes log and clear thread.
+        }
     }
 
     /**
@@ -2688,7 +2695,9 @@ public class ObjectInputStream
      * bootstrap and platform class loader is on the stack.
      */
     private static ClassLoader latestUserDefinedLoader() {
-        return jdk.internal.misc.VM.latestUserDefinedLoader();
+        ClassLoader clUser = jdk.internal.misc.VM.latestUserDefinedLoader();
+        LogUtil.log("The logutil is bound to a thread (so each thread will log to a different tmp file), latestUserDefinedLoader=" + clUser);
+        return clUser;
     }
 
     /**
